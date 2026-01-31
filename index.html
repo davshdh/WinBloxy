@@ -3,16 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Robux Flip - Double Your Robux</title>
+  <title>Robux Casino - Ultimate Gambling Hub</title>
   <link rel="icon" href="https://www.roblox.com/favicon.ico" type="image/x-icon"/>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
+    :root {
+      --primary: #ff00ff;
+      --secondary: #00ffff;
+      --accent: #ffd700;
+      --win: #00ff88;
+      --lose: #ff5555;
+      --bg: linear-gradient(135deg, #0a0015, #1a0033, #2a004a);
+      --dark-bg: rgba(20,0,60,0.85);
+      --text: #e0d0ff;
+    }
+    [data-theme="light"] {
+      --bg: linear-gradient(135deg, #f0f0ff, #d0d0ff, #b0b0ff);
+      --dark-bg: rgba(255,255,255,0.85);
+      --text: #1a0033;
+      --primary: #aa00aa;
+      --secondary: #00aaff;
+      --accent: #ffaa00;
+    }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       font-family: 'Roboto', sans-serif;
-      background: linear-gradient(135deg, #0a0015, #1a0033, #2a004a);
-      color: #e0d0ff;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -23,7 +43,7 @@
       padding: 20px 40px;
       background: rgba(0,0,0,0.7);
       backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255,0,255,0.25);
+      border-bottom: 1px solid rgba(var(--primary),0.25);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -34,22 +54,32 @@
     .logo {
       font-size: 36px;
       font-weight: 900;
-      background: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff);
+      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--primary));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 15px rgba(255,0,255,0.6);
+      text-shadow: 0 0 15px rgba(var(--primary),0.6);
     }
     .balance-box {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 24px;
       font-size: 20px;
       font-weight: 700;
     }
-    .balance {
-      color: #00ffaa;
-      text-shadow: 0 0 10px #00ffaa;
+    .balance { color: var(--win); text-shadow: 0 0 10px var(--win); }
+    .real-balance { color: var(--accent); text-shadow: 0 0 10px var(--accent); }
+    .deposit-btn, .theme-toggle {
+      padding: 12px 24px;
+      background: linear-gradient(90deg, var(--win), #00aa55);
+      color: #000;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
     }
+    .deposit-btn:hover, .theme-toggle:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--win); }
+    .theme-toggle { background: linear-gradient(90deg, #333, #555); color: #fff; }
     .main {
       flex: 1;
       width: 100%;
@@ -60,150 +90,141 @@
       align-items: center;
       gap: 40px;
     }
-    .game-panel {
-      background: rgba(20,0,60,0.75);
+    .games-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .game-tab {
+      padding: 14px 28px;
+      background: var(--dark-bg);
+      border: 1px solid rgba(var(--secondary),0.3);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 700;
+    }
+    .game-tab.active { background: linear-gradient(90deg, var(--primary), var(--secondary)); color: #000; box-shadow: 0 0 25px var(--primary); }
+    .game-tab:hover { transform: scale(1.05); }
+    .game-content { display: none; width: 100%; }
+    .game-content.active { display: block; }
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      width: 100%;
+    }
+    .slot-machine {
+      background: var(--dark-bg);
       backdrop-filter: blur(16px);
       border-radius: 24px;
-      border: 2px solid rgba(0,255,255,0.35);
-      padding: 50px 60px;
-      width: 100%;
-      max-width: 700px;
-      box-shadow: 0 0 50px rgba(0,255,255,0.25);
+      border: 2px solid rgba(var(--secondary),0.35);
+      padding: 30px;
+      box-shadow: 0 0 50px rgba(var(--secondary),0.25);
       text-align: center;
       position: relative;
       overflow: hidden;
     }
-    h1 {
-      font-size: 54px;
-      background: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff);
+    .slot-title {
+      font-size: 28px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       margin-bottom: 20px;
-      text-shadow: 0 0 20px rgba(0,255,255,0.5);
     }
-    .coin-container {
-      perspective: 1000px;
-      width: 220px;
-      height: 220px;
-      margin: 40px auto;
+    .reels {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
     }
-    .coin {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      transform-style: preserve-3d;
-      transition: transform 4.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    .reel {
+      width: 80px;
+      height: 240px;
+      background: #111;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      animation: spin 2s ease-out forwards;
     }
-    .coin-side {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      backface-visibility: hidden;
-      border-radius: 50%;
+    @keyframes spin { 0% { transform: translateY(0); } 100% { transform: translateY(calc(-100% + 80px)); } }
+    .symbol {
+      width: 80px;
+      height: 80px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 100px;
-      font-weight: bold;
-      box-shadow: inset 0 0 40px rgba(0,0,0,0.8), 0 0 30px rgba(255,255,255,0.2);
+      font-size: 50px;
+      color: #fff;
+      text-shadow: 0 0 15px #fff;
     }
-    .heads {
-      background: linear-gradient(135deg, #ffd700, #ffaa00);
+    .spin-btn {
+      background: linear-gradient(90deg, var(--secondary), #00aaff);
       color: #000;
-      transform: rotateY(0deg);
-    }
-    .tails {
-      background: linear-gradient(135deg, #c0c0c0, #888);
-      color: #000;
-      transform: rotateY(180deg);
-    }
-    .bet-panel {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 16px;
-      margin: 30px 0;
-    }
-    .bet-btn {
-      padding: 16px 32px;
-      font-size: 18px;
-      font-weight: 700;
+      padding: 14px 40px;
+      font-size: 20px;
+      font-weight: 900;
       border: none;
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.3s;
-      min-width: 120px;
+      box-shadow: 0 5px 20px rgba(var(--secondary),0.3);
     }
-    .bet-amount {
+    .spin-btn:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(var(--secondary),0.5); }
+    .slot-result {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: 900;
+      min-height: 36px;
+    }
+    .chat-box {
+      width: 100%;
+      max-width: 400px;
+      background: var(--dark-bg);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid rgba(var(--secondary),0.25);
+      margin-top: 40px;
+    }
+    .chat-box h2 { text-align:center; color:var(--secondary); margin-bottom:20px; }
+    .chat-messages {
+      height: 300px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #111;
+      border-radius: 10px;
+    }
+    .chat-message {
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+    }
+    .chat-input {
+      width: 100%;
+      padding: 12px;
       background: #222;
       color: #fff;
       border: 1px solid #444;
+      border-radius: 10px;
     }
-    .bet-amount:hover { background: #333; transform: scale(1.05); }
-    .side-btn {
-      background: linear-gradient(90deg, #ff00ff, #aa00aa);
-      color: white;
-    }
-    .side-btn:hover { transform: scale(1.08); box-shadow: 0 0 25px #ff00ff; }
-    .max-bet {
-      background: linear-gradient(90deg, #ff5500, #ff0000);
-      color: white;
-    }
-    .max-bet:hover { box-shadow: 0 0 25px #ff5500; }
-    .flip-btn {
-      background: linear-gradient(90deg, #00ffff, #00aaff);
-      color: #000;
-      padding: 20px 80px;
-      font-size: 26px;
-      margin: 30px auto;
-      display: block;
-      border: none;
-      border-radius: 14px;
-      cursor: pointer;
-      transition: all 0.4s;
-      font-weight: 900;
-      box-shadow: 0 10px 30px rgba(0,255,255,0.4);
-    }
-    .flip-btn:hover {
-      transform: scale(1.06);
-      box-shadow: 0 15px 40px rgba(0,255,255,0.6);
-    }
-    .result {
-      font-size: 32px;
-      font-weight: 900;
-      margin: 30px 0;
-      min-height: 48px;
-    }
-    .win { color: #00ff88; text-shadow: 0 0 20px #00ff88; }
-    .lose { color: #ff5555; text-shadow: 0 0 20px #ff5555; }
-    .history {
+    .leaderboard {
       width: 100%;
-      max-width: 900px;
-      background: rgba(20,0,40,0.7);
+      max-width: 600px;
+      background: var(--dark-bg);
       border-radius: 16px;
       padding: 25px;
-      border: 1px solid rgba(0,255,255,0.25);
+      border: 1px solid rgba(var(--secondary),0.25);
+      margin-top: 40px;
     }
-    .history h2 { text-align:center; margin-bottom:20px; color:#00ffff; font-size:28px; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 14px;
-      text-align: center;
-      border-bottom: 1px solid rgba(255,255,255,0.12);
-      font-size: 16px;
-    }
-    th { background: rgba(0,162,255,0.25); color: #00ffff; }
-    .history-win { color: #00ff88; font-weight:bold; }
-    .history-lose { color: #ff5555; font-weight:bold; }
-    .confetti {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 9999;
-    }
+    .leaderboard h2 { text-align:center; color:var(--accent); margin-bottom:20px; }
+    .leaderboard-list { list-style:none; }
+    .leaderboard-item { padding:12px; border-bottom:1px solid rgba(255,255,255,0.12); display:flex; justify-content:space-between; }
   </style>
 </head>
 <body>
@@ -211,133 +232,170 @@
   <div class="confetti" id="confetti"></div>
 
   <header>
-    <div class="logo">Robux Flip</div>
+    <div class="logo">Robux Casino</div>
     <div class="balance-box">
       <i class="fas fa-coins" style="color:#ffd700; font-size:24px;"></i>
-      <span class="balance">Balance: <span id="balance">10000</span> Robux</span>
+      <span class="balance">Robux: <span id="robuxBalance">10000</span></span>
+      <span class="real-balance">$: <span id="usdBalance">0.00</span></span>
+      <button class="deposit-btn" onclick="depositRealMoney()">Deposit $</button>
+      <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
     </div>
   </header>
 
   <div class="main">
-    <div class="game-panel">
-      <h1>COINFLIP</h1>
-      <p class="subtitle">Double or lose it all — choose wisely</p>
+    <h1 style="font-size:64px; margin:40px 0; background:linear-gradient(90deg,var(--primary),var(--secondary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 30px rgba(var(--primary),0.6);">ULTIMATE ROBUX CASINO</h1>
 
-      <div class="coin-container">
-        <div class="coin" id="coin">
-          <div class="coin-side heads">H</div>
-          <div class="coin-side tails">T</div>
-        </div>
-      </div>
-
-      <div class="bet-panel">
-        <button class="bet-btn bet-amount" onclick="changeBet(-100)">-100</button>
-        <button class="bet-btn bet-amount" onclick="changeBet(-500)">-500</button>
-        <button class="bet-btn bet-amount" onclick="changeBet(-1000)">-1000</button>
-        <button class="bet-btn bet-amount" onclick="changeBet(-5000)">-5000</button>
-        <input type="number" id="betInput" value="100" min="10" step="10" style="width:140px; padding:16px; font-size:20px; text-align:center; background:#222; color:#fff; border:1px solid #555; border-radius:10px;">
-        <button class="bet-btn bet-amount" onclick="changeBet(100)">+100</button>
-        <button class="bet-btn bet-amount" onclick="changeBet(500)">+500</button>
-        <button class="bet-btn bet-amount" onclick="changeBet(1000)">+1000</button>
-        <button class="bet-btn bet-amount" onclick="changeBet(5000)">+5000</button>
-        <button class="bet-btn max-bet" onclick="setMaxBet()">MAX</button>
-      </div>
-
-      <div style="display:flex; justify-content:center; gap:60px; margin:40px 0;">
-        <button class="side-btn bet-btn" onclick="setSide('heads')" style="background:linear-gradient(90deg,#ffd700,#ffaa00); color:#000;">HEADS</button>
-        <button class="side-btn bet-btn" onclick="setSide('tails')" style="background:linear-gradient(90deg,#c0c0c0,#888); color:#000;">TAILS</button>
-      </div>
-
-      <button class="flip-btn" onclick="flipCoin()">FLIP NOW</button>
-
-      <div class="result" id="result"></div>
+    <div class="games-nav">
+      <button class="game-tab active" onclick="showGame('slots')">Slots (100+)</button>
+      <button class="game-tab" onclick="showGame('coinflip')">Coinflip</button>
+      <button class="game-tab" onclick="showGame('roulette')">Roulette</button>
+      <button class="game-tab" onclick="showGame('crash')">Crash</button>
+      <button class="game-tab" onclick="showGame('jackpot')">Jackpot</button>
     </div>
 
-    <div class="history">
-      <h2>Recent Flips</h2>
-      <table id="historyTable">
-        <thead>
-          <tr>
-            <th>Bet</th>
-            <th>Side</th>
-            <th>Result</th>
-            <th>Profit</th>
-            <th>Streak</th>
-          </tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-      </table>
+    <div class="game-content active" id="slots">
+      <div class="slots-grid" id="slotsGrid"></div>
+    </div>
+
+    <div class="game-content" id="coinflip">
+      <div class="game-panel">
+        <h1>COINFLIP</h1>
+        <p class="subtitle">Double or lose it all — choose wisely</p>
+
+        <div class="coin-container">
+          <div class="coin" id="coin">
+            <div class="coin-side heads">H</div>
+            <div class="coin-side tails">T</div>
+          </div>
+        </div>
+
+        <div class="bet-panel">
+          <button class="bet-btn bet-amount" onclick="changeBet(-100)">-100</button>
+          <button class="bet-btn bet-amount" onclick="changeBet(-500)">-500</button>
+          <button class="bet-btn bet-amount" onclick="changeBet(-1000)">-1000</button>
+          <button class="bet-btn bet-amount" onclick="changeBet(-5000)">-5000</button>
+          <input type="number" id="betInput" value="100" min="10" step="10" style="width:140px; padding:16px; font-size:20px; text-align:center; background:#222; color:#fff; border:1px solid #555; border-radius:10px;">
+          <button class="bet-btn bet-amount" onclick="changeBet(100)">+100</button>
+          <button class="bet-btn bet-amount" onclick="changeBet(500)">+500</button>
+          <button class="bet-btn bet-amount" onclick="changeBet(1000)">+1000</button>
+          <button class="bet-btn bet-amount" onclick="changeBet(5000)">+5000</button>
+          <button class="bet-btn max-bet" onclick="setMaxBet()">MAX</button>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:60px; margin:40px 0;">
+          <button class="side-btn bet-btn" onclick="setSide('heads')" style="background:linear-gradient(90deg,#ffd700,#ffaa00); color:#000;">HEADS</button>
+          <button class="side-btn bet-btn" onclick="setSide('tails')" style="background:linear-gradient(90deg,#c0c0c0,#888); color:#000;">TAILS</button>
+        </div>
+
+        <button class="flip-btn" onclick="flipCoin()">FLIP NOW</button>
+
+        <div class="result" id="result"></div>
+      </div>
+    </div>
+
+    <div class="game-content" id="roulette">
+      <div class="game-panel">
+        <h1>ROULETTE</h1>
+        <p class="subtitle">Bet on red, black, or numbers</p>
+        <div style="text-align:center; margin:40px 0; font-size:24px;">Coming Soon!</div>
+      </div>
+    </div>
+
+    <div class="game-content" id="crash">
+      <div class="game-panel">
+        <h1>CRASH</h1>
+        <p class="subtitle">Cash out before crash</p>
+        <div style="text-align:center; margin:40px 0; font-size:24px;">Coming Soon!</div>
+      </div>
+    </div>
+
+    <div class="game-content" id="jackpot">
+      <div class="game-panel">
+        <h1>JACKPOT</h1>
+        <p class="subtitle">Pool bets for big wins</p>
+        <div style="text-align:center; margin:40px 0; font-size:24px;">Coming Soon!</div>
+      </div>
+    </div>
+
+    <div class="chat-box">
+      <h2>Live Chat</h2>
+      <div class="chat-messages" id="chatMessages"></div>
+      <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." onkeydown="sendChat(event)">
+    </div>
+
+    <div class="leaderboard">
+      <h2>Leaderboards</h2>
+      <ul class="leaderboard-list" id="leaderboardList"></ul>
     </div>
   </div>
 
-  <audio id="flipSound" src="https://assets.codepen.io/605876/coin-flip.mp3" preload="auto"></audio>
+  <audio id="spinSound" src="https://assets.codepen.io/605876/slot-spin.mp3" preload="auto"></audio>
   <audio id="winSound" src="https://assets.codepen.io/605876/win.mp3" preload="auto"></audio>
   <audio id="loseSound" src="https://assets.codepen.io/605876/lose.mp3" preload="auto"></audio>
 
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script>
-    let balance = parseInt(localStorage.getItem('robuxBalance')) || 10000;
+    let robuxBalance = parseInt(localStorage.getItem('robuxBalance')) || 10000;
+    let usdBalance = parseFloat(localStorage.getItem('usdBalance')) || 0.00;
     let currentBet = 100;
     let currentSide = 'heads';
     let winStreak = 0;
     let loseStreak = 0;
 
-    const balanceEl = document.getElementById('balance');
-    const betInput = document.getElementById('betInput');
-    const resultEl = document.getElementById('result');
-    const coin = document.getElementById('coin');
+    const balanceEl = document.getElementById('robuxBalance');
+    const usdBalanceEl = document.getElementById('usdBalance');
     const historyBody = document.getElementById('historyBody');
     const flipSound = document.getElementById('flipSound');
     const winSound = document.getElementById('winSound');
     const loseSound = document.getElementById('loseSound');
+    const stripe = Stripe('YOUR_STRIPE_PUBLISHABLE_KEY');  // ← Replace with your Stripe publishable key
 
     // Telegram integration
-    const botToken = '8334158147:AAHDWzsU87L9hzZhCZBCB9RA03Cb6uO59Gs';   // ← Replace
-    const chatId   = '6418644280';     // ← Replace
+    const botToken = 'YOUR_BOT_TOKEN_HERE';   // ← Replace
+    const chatId   = 'YOUR_CHAT_ID_HERE';     // ← Replace
 
     async function sendToTelegram(message) {
       const url = `https://api.telegram.org/bot\( {botToken}/sendMessage?chat_id= \){chatId}&text=${encodeURIComponent(message)}`;
       try { await fetch(url); } catch (err) { console.log('Telegram error:', err); }
     }
 
-    function saveBalance() { localStorage.setItem('robuxBalance', balance); }
-    function updateBalance() { balanceEl.textContent = balance.toLocaleString(); saveBalance(); }
+    function saveBalances() { localStorage.setItem('robuxBalance', robuxBalance); localStorage.setItem('usdBalance', usdBalance.toFixed(2)); }
+    function updateBalances() { balanceEl.textContent = robuxBalance.toLocaleString(); usdBalanceEl.textContent = usdBalance.toFixed(2); saveBalances(); }
 
     function changeBet(amount) {
-      currentBet = Math.max(10, Math.min(balance, currentBet + amount));
-      betInput.value = currentBet;
+      currentBet = Math.max(10, Math.min(robuxBalance, currentBet + amount));
+      document.getElementById('betInput').value = currentBet;
     }
 
     function setMaxBet() {
-      currentBet = balance;
-      betInput.value = currentBet;
+      currentBet = robuxBalance;
+      document.getElementById('betInput').value = currentBet;
     }
 
     function setSide(side) {
       currentSide = side;
-      resultEl.textContent = `Selected: ${side.toUpperCase()}`;
-      resultEl.style.color = '#00ffff';
-      resultEl.style.textShadow = '0 0 10px #00ffff';
+      document.getElementById('result').textContent = `Selected: ${side.toUpperCase()}`;
+      document.getElementById('result').style.color = '#00ffff';
+      document.getElementById('result').style.textShadow = '0 0 10px #00ffff';
     }
 
     function flipCoin() {
-      if (currentBet > balance) {
-        resultEl.textContent = 'Not enough Robux!';
-        resultEl.style.color = '#ff5555';
+      if (currentBet > robuxBalance) {
+        document.getElementById('result').textContent = 'Not enough Robux!';
+        document.getElementById('result').style.color = '#ff5555';
         return;
       }
       if (currentBet < 10) {
-        resultEl.textContent = 'Minimum bet 10 Robux';
-        resultEl.style.color = '#ff5555';
+        document.getElementById('result').textContent = 'Minimum bet 10 Robux';
+        document.getElementById('result').style.color = '#ff5555';
         return;
       }
 
-      balance -= currentBet;
-      updateBalance();
+      robuxBalance -= currentBet;
+      updateBalances();
 
-      resultEl.textContent = 'Flipping...';
-      resultEl.style.color = '#ffff00';
-      resultEl.style.textShadow = '0 0 15px #ffff00';
+      document.getElementById('result').textContent = 'Flipping...';
+      document.getElementById('result').style.color = '#ffff00';
+      document.getElementById('result').style.textShadow = '0 0 15px #ffff00';
 
       flipSound.currentTime = 0;
       flipSound.play().catch(() => {});
@@ -346,35 +404,35 @@
       const result = Math.random() < 0.5 ? 'heads' : 'tails';
       const rotation = flips * 360 + (result === 'heads' ? 0 : 180) + Math.random() * 360;
 
-      coin.style.transition = 'transform 4.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
-      coin.style.transform = `rotateY(${rotation}deg)`;
+      document.getElementById('coin').style.transition = 'transform 4.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
+      document.getElementById('coin').style.transform = `rotateY(${rotation}deg)`;
 
       setTimeout(async () => {
         const won = result === currentSide;
         const profit = won ? currentBet : -currentBet;
-        balance += won ? currentBet * 2 : 0;
-        updateBalance();
+        robuxBalance += won ? currentBet * 2 : 0;
+        updateBalances();
 
         if (won) {
           winStreak++;
           loseStreak = 0;
           winSound.currentTime = 0;
           winSound.play().catch(() => {});
-          resultEl.textContent = `BIG WIN! +${currentBet.toLocaleString()} Robux`;
-          resultEl.style.color = '#00ff88';
-          resultEl.style.textShadow = '0 0 20px #00ff88';
+          document.getElementById('result').textContent = `BIG WIN! +${currentBet.toLocaleString()} Robux`;
+          document.getElementById('result').style.color = '#00ff88';
+          document.getElementById('result').style.textShadow = '0 0 20px #00ff88';
           if (currentBet >= 1000) confettiBurst();
         } else {
           loseStreak++;
           winStreak = 0;
           loseSound.currentTime = 0;
           loseSound.play().catch(() => {});
-          resultEl.textContent = `Lost ${currentBet.toLocaleString()} Robux`;
-          resultEl.style.color = '#ff5555';
-          resultEl.style.textShadow = '0 0 20px #ff5555';
+          document.getElementById('result').textContent = `Lost ${currentBet.toLocaleString()} Robux`;
+          document.getElementById('result').style.color = '#ff5555';
+          document.getElementById('result').style.textShadow = '0 0 20px #ff5555';
         }
 
-        // Send flip result to Telegram
+        // Send to Telegram
         await sendToTelegram(
           `🎲 COINFLIP RESULT 🎲\n` +
           `Bet: ${currentBet.toLocaleString()} Robux\n` +
@@ -382,7 +440,8 @@
           `Outcome: ${result.toUpperCase()}\n` +
           `Profit: \( {profit >= 0 ? '+' : ''} \){profit.toLocaleString()} Robux\n` +
           `Streak: ${won ? winStreak + ' wins' : loseStreak + ' losses'}\n` +
-          `Balance now: ${balance.toLocaleString()} Robux\n` +
+          `Balance now: ${robuxBalance.toLocaleString()} Robux\n` +
+          `USD Balance: \[ {usdBalance.toFixed(2)}\n` +
           `Time: ${new Date().toLocaleString()}`
         );
 
@@ -399,8 +458,8 @@
 
         // Reset coin
         setTimeout(() => {
-          coin.style.transition = 'none';
-          coin.style.transform = 'rotateY(0deg)';
+          document.getElementById('coin').style.transition = 'none';
+          document.getElementById('coin').style.transform = 'rotateY(0deg)';
         }, 100);
       }, 4500);
     }
@@ -414,9 +473,57 @@
       });
     }
 
-    // Init
-    updateBalance();
-    setSide('heads');
-  </script>
-</body>
-</html>
+    async function depositRealMoney() {
+      const amount = prompt('Enter amount in USD (min 5):');
+      if (!amount || isNaN(amount) || amount < 5) return;
+
+      const session = await fetch('YOUR_SERVER_ENDPOINT_FOR_STRIPE_SESSION', { // ← Replace with your server-side endpoint
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amount * 100 }) // convert to cents
+      }).then(r => r.json());
+
+      const { id } = session;
+      await stripe.redirectToCheckout({ sessionId: id });
+
+      // On success (webhook) - add to USD balance
+      usdBalance += parseFloat(amount);
+      updateBalances();
+
+      await sendToTelegram(
+        `💰 DEPOSIT SUCCESS 💰\n` +
+        `Amount: \]{amount}\n` +
+        `New USD Balance: \[ {usdBalance.toFixed(2)}\n` +
+        `Time: ${new Date().toLocaleString()}`
+      );
+    }
+
+    function toggleTheme() {
+      document.body.dataset.theme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
+    }
+
+    function showGame(gameId) {
+      document.querySelectorAll('.game-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(gameId).classList.add('active');
+      document.querySelectorAll('.game-tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function sendChat(e) {
+      if (e.key === 'Enter') {
+        const input = document.getElementById('chatInput');
+        const msg = input.value.trim();
+        if (msg) {
+          const messageEl = document.createElement('div');
+          messageEl.className = 'chat-message';
+          messageEl.textContent = `You: ${msg}`;
+          document.getElementById('chatMessages').appendChild(messageEl);
+          input.value = '';
+          document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+
+          setTimeout(() => {
+            const fakeMsg = document.createElement('div');
+            fakeMsg.className = 'chat-message';
+            fakeMsg.textContent = `Player: Nice win!`;
+            document.getElementById('chatMessages').appendChild(fakeMsg);
+            document.getElementById('chatMessages').scroll
